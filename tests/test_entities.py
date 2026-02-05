@@ -89,24 +89,28 @@ class TestGoogleCalendarEventFromImplementation:
         assert result.end == datetime(2024, 2, 6, 0, 0, 0, tzinfo=UTC)
         assert result.title == "All Day Meeting"
 
-    def test_date_start_datetime_non_midnight_end_raises(self):
+    def test_timed_event_starting_at_midnight(self):
         """
-        Test that a date start with a non-midnight datetime end raises an error.
-        This is a genuinely malformed event that can't be handled.
+        Test Google API edge case: a timed event starting at midnight with end as datetime.
+        This happens when an event like "Kane/Leyli/Aram - Planning" starts at midnight
+        and ends at 01:00 - Google returns start as date but end as datetime.
+        Should be treated as a timed event, not all-day.
         """
         event = GoogleCalendarEvent(
-            id="bad_event",
-            summary="Bad Event",
-            description="Inconsistent event",
+            id="timed_midnight_start",
+            summary="Kane/Leyli/Aram - Planning Half 1 2026",
+            description="Event from midnight to 1am",
             location="",
             attendees="",
-            start=date(2024, 2, 2),
-            end=datetime(2024, 2, 3, 14, 30, 0, tzinfo=UTC),  # Non-midnight time
+            start=date(2024, 2, 2),  # Represents midnight
+            end=datetime(2024, 2, 2, 1, 0, 0, tzinfo=UTC),  # 1 AM
         )
-        with pytest.raises(ValueError) as exc_info:
-            AbstractCalendarEvent.from_implementation(event)
-        assert "non-midnight time" in str(exc_info.value)
-        assert "Bad Event" in str(exc_info.value)
+        result = AbstractCalendarEvent.from_implementation(event)
+        # Should be treated as a timed event (NOT all-day)
+        assert result.is_all_day is False
+        assert result.start == datetime(2024, 2, 2, 0, 0, 0, tzinfo=UTC)  # Midnight
+        assert result.end == datetime(2024, 2, 2, 1, 0, 0, tzinfo=UTC)  # 1 AM
+        assert result.title == "Kane/Leyli/Aram - Planning Half 1 2026"
 
     def test_timed_event_ending_at_midnight(self):
         """
