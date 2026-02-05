@@ -50,15 +50,16 @@ class AbstractCalendarEvent(BaseModel):
             start_val = event_impl.start
             end_val = event_impl.end
 
-            # Handle case where end is a datetime at midnight but start is a date
+            # Handle case where start is a date but end is a datetime
             if type(start_val) == date and type(end_val) == datetime:
                 if end_val.hour == 0 and end_val.minute == 0 and end_val.second == 0:
-                    # Convert midnight datetime to date for consistency
+                    # End is at midnight - treat as all-day event, convert end to date
                     end_val = end_val.date()
                 else:
-                    raise ValueError(f"For event titled '{event_impl.summary}', the start is a date (not datetime), "
-                                     f"but the end is a datetime with non-midnight time ({end_val.time()}), "
-                                     f"which is inconsistent")
+                    # Timed event starting at midnight - Google returns start as date instead of datetime
+                    # Convert the start date to a datetime at midnight (00:00:00 UTC)
+                    zero_am_utc = time(hour=0, minute=0, second=0, tzinfo=UTC)
+                    start_val = datetime.combine(start_val, zero_am_utc)
 
             # Handle case where start is a datetime but end is a date
             if type(start_val) == datetime and type(end_val) == date:
