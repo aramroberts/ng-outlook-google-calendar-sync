@@ -13,6 +13,7 @@ class GoogleCalendarEvent(BaseModel):
     attendees: str  # separated by comma (or ", "), usually no comma if there is only 1 attendee
     start: date | datetime  # date for all-day events, otherwise Google uses e.g. 2024-01-05T19:15:00+00:00
     end: date | datetime
+    transparency: Optional[str] = None  # "transparent" = free, "opaque" (default/absent) = busy
 
 
 class OutlookCalendarEvent(BaseModel):
@@ -94,6 +95,8 @@ class AbstractCalendarEvent(BaseModel):
                 end_time = end_val
                 is_all_day = False
 
+            show_as = "free" if event_impl.transparency == "transparent" else "busy"
+
             return cls(
                 sync_correlation_id=event_impl.id,
                 title="" if anonymize_fields else event_impl.summary,
@@ -101,7 +104,8 @@ class AbstractCalendarEvent(BaseModel):
                 location="" if anonymize_fields else event_impl.location,
                 start=start_time,
                 end=end_time,
-                is_all_day=is_all_day
+                is_all_day=is_all_day,
+                show_as=show_as
             )
 
         return cls(
